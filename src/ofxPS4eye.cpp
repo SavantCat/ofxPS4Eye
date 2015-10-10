@@ -101,21 +101,18 @@ void ofxPS4eye::yuv440ToGray(uint8_t *in,uint8_t *out, int size_x,int size_y){
     unsigned int  *pixel_16=(unsigned int*)in;;     // for YUYV
     unsigned char *pixel_24=out;
     
-    int y,y2;
-    int i;
+    static int i;
     
-    for (i=0; i< (size_x*size_y) ;)
+    for (i=0; i< (size_x*size_y/2) ;i++)
     {
-        y  = ((*pixel_16 & 0x000000ff));
-        pixel_24[i++] = y;
-        pixel_24[i++] = y;
+        //y  = ((*pixel_16 & 0x000000ff));
+        *pixel_24++ = ((*pixel_16 & 0x000000ff));
+        *pixel_24++ = ((*pixel_16 & 0x00ff0000)>>16);
         pixel_16++;
     }
 }
 
 void ofxPS4eye::ini(int deviceNum,int mode,int fps){
-    ofSetVerticalSync(false);
-    ofSetFrameRate(0);
     
     isPS4Eye              = false;
     camFrameCount         = 0;
@@ -146,9 +143,11 @@ void ofxPS4eye::ini(int deviceNum,int mode,int fps){
         memset(frame_rgb_left, 0, eye->getWidth()*eye->getHeight());
         memset(frame_rgb_right, 0, eye->getWidth()*eye->getHeight());
         
-        //ofxCvColorImage
+        //ofxCvGrayImage
         data_R.grayImage.setFromPixels(frame_rgb_right, eye->getWidth(), eye->getHeight());
         data_L.grayImage.setFromPixels(frame_rgb_right, eye->getWidth(), eye->getHeight());
+        data_R.MatImage = data_R.grayImage.getCvImage();
+        data_L.MatImage = data_L.grayImage.getCvImage();
         
         videoFrame 	= new unsigned char[eye->getWidth()*eye->getHeight()*3];
         
@@ -163,26 +162,31 @@ void ofxPS4eye::threadedFunction(){
     while (isThreadRunning() != 0) {
         if(PS4EYECam::updateDevices() == false)
             break;
+        FrameUpdate();
+        
+        sleep(0);
     }
 }
 
 void ofxPS4eye::FrameUpdate(){
     if(isPS4Eye){
-        eyeframe * frame;
+        static eyeframe * frame;
         isNewFrame = eye->isNewFrame();
         if(isNewFrame)
         {
             frame=eye->getLastVideoFramePointer();
-            
+
             //Right Eye
             yuv440ToGray(frame->videoRightFrame,frame_rgb_right,eye->getWidth(), eye->getHeight());
             //ofxCvGrayImage
             data_R.grayImage.setFromPixels(frame_rgb_right, eye->getWidth(), eye->getHeight());
+            data_R.MatImage = data_R.grayImage.getCvImage();
             
             //Left Eye
             yuv440ToGray(frame->videoLeftFrame,frame_rgb_left,eye->getWidth(), eye->getHeight());
             //ofxCvGrayImage
             data_L.grayImage.setFromPixels(frame_rgb_left, eye->getWidth(), eye->getHeight());
+            data_L.MatImage = data_L.grayImage.getCvImage();
         }
         
         camFrameCount += isNewFrame ? 1: 0;

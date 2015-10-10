@@ -45,6 +45,7 @@ public:
     public:
         ofxCvColorImage videoImage;
         ofxCvGrayscaleImage grayImage;
+        cv::Mat MatImage;
         float width,height;
     }data_R,data_L;
     
